@@ -41,6 +41,7 @@ private:
 	ComPtr<ID3D11PixelShader> pixelShader;
 
 	// objects
+	float bound;
 	std::vector<Box*> boxes;
 
 	// update

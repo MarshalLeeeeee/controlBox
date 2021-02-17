@@ -13,16 +13,16 @@ GameApp::GameApp(HINSTANCE hInstance, int w, int h) :
 	worldBuffer(nullptr), world(),
 	viewBuffer(nullptr), view(),
 	projBuffer(nullptr), proj(),
-	eye(), drt(), dt(0.001),
+	eye(), drt(), dt(Constant::dt), bound(Constant::bound),
 	vertexLayout(nullptr),
 	vertexShader(nullptr),
 	pixelShader(nullptr) {
 	boxes.push_back(new Car(DirectX::XMFLOAT3(0.0, 0.7, 0.0), DirectX::XMFLOAT3(1.5, 0.7, 0.7)));
-	boxes.push_back(new Box(DirectX::XMFLOAT3(0.0, 20.0, 20.0), DirectX::XMFLOAT3(20, 20, 0.1)));
-	boxes.push_back(new Box(DirectX::XMFLOAT3(0.0, 20.0, -20.0), DirectX::XMFLOAT3(20, 20, 0.1)));
-	boxes.push_back(new Box(DirectX::XMFLOAT3(20.0, 20.0, 0.0), DirectX::XMFLOAT3(0.1, 20, 20)));
-	boxes.push_back(new Box(DirectX::XMFLOAT3(-20.0, 20.0, 0.0), DirectX::XMFLOAT3(0.1, 20, 20)));
-	boxes.push_back(new Box(DirectX::XMFLOAT3(0.0, -0.1, 0.0), DirectX::XMFLOAT3(20, 0.1, 20)));
+	boxes.push_back(new Box(DirectX::XMFLOAT3(0.0, bound, bound), DirectX::XMFLOAT3(bound, bound, 0.01)));
+	boxes.push_back(new Box(DirectX::XMFLOAT3(0.0, bound, -bound), DirectX::XMFLOAT3(bound, bound, 0.01)));
+	boxes.push_back(new Box(DirectX::XMFLOAT3(bound, bound, 0.0), DirectX::XMFLOAT3(0.01, bound, bound)));
+	boxes.push_back(new Box(DirectX::XMFLOAT3(-bound, bound, 0.0), DirectX::XMFLOAT3(0.01, bound, bound)));
+	boxes.push_back(new Box(DirectX::XMFLOAT3(0.0, -0.01, 0.0), DirectX::XMFLOAT3(bound, 0.01, bound)));
 
 }
 
@@ -35,13 +35,26 @@ void GameApp::update() {
 	DirectX::Keyboard::State keyState = keyboard->GetState();
 	keyboardTracker.Update(keyState);
 
+	DirectX::XMFLOAT3 oldEye = eye;
+	DirectX::XMFLOAT3 oldDrt = drt;;
+	DirectX::XMMATRIX oldView = view.view;
+
 	if (keyState.IsKeyDown(DirectX::Keyboard::W)) forward();
 	if (keyState.IsKeyDown(DirectX::Keyboard::A)) turnLeft();
 	if (keyState.IsKeyDown(DirectX::Keyboard::S)) backward();
 	if (keyState.IsKeyDown(DirectX::Keyboard::D)) turnRight();
 	if (keyState.IsKeyDown(DirectX::Keyboard::Escape)) SendMessage(window, WM_DESTROY, 0, 0);
 
-	// todo: update view 
+	for (auto& b : boxes) {
+		if (!b->update(view.view)) {
+			eye = oldEye;
+			drt = oldDrt;
+			view.view = oldView;
+			return;
+		}
+	}
+
+	// update view 
 	D3D11_MAPPED_SUBRESOURCE mappedDataView;
 	immediateContext->Map(viewBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedDataView);
 	memcpy_s(mappedDataView.pData, sizeof(view), &view, sizeof(view));
@@ -59,7 +72,7 @@ void GameApp::display() {
 
 	// display every object
 	for (auto& b : boxes) {
-		b->display(immediateContext.Get(), view.view);
+		b->display(immediateContext.Get());
 	}
 
 	swapChain->Present(0, 0);

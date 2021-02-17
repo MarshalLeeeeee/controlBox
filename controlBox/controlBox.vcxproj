@@ -150,6 +150,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Box.cpp" />
+    <ClCompile Include="Constant.cpp" />
     <ClCompile Include="D3dApp.cpp" />
     <ClCompile Include="GameApp.cpp" />
     <ClCompile Include="Keyboard.cpp" />
