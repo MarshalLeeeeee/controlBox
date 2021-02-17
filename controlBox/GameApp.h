@@ -25,7 +25,7 @@ public:
 	void display();
 
 private:
-	// buffer
+	// coordinate and buffer
 	ComPtr<ID3D11Buffer> worldBuffer; // local to world
 	ComPtr<ID3D11Buffer> viewBuffer; // world to view
 	ComPtr<ID3D11Buffer> projBuffer; // view to proj
@@ -34,6 +34,9 @@ private:
 	ProjBuffer proj;
 	DirectX::XMFLOAT3 eye;
 	DirectX::XMFLOAT3 drt;
+	DirectX::XMMATRIX relView;
+	float xangle;
+	float yangle;
 
 	// shader
 	ComPtr<ID3D11InputLayout> vertexLayout;
