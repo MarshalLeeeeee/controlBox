@@ -20,8 +20,13 @@ public:
 	Box(DirectX::XMFLOAT3 p, DirectX::XMFLOAT3 s);
 
 	bool init(ID3D11Device* device);
-	void display(ID3D11DeviceContext* immediateContext);
-private:
+	virtual void display(ID3D11DeviceContext* immediateContext);
+
+protected:
+	virtual void initVertex(VertexPosColor vertices[]) const;
+	DirectX::XMFLOAT3 scaleAndTranslate(const DirectX::XMFLOAT3& f) const;
+	DirectX::XMFLOAT3 scaling(const DirectX::XMFLOAT3& f) const;
+
 	DirectX::XMFLOAT3 pos;
 	DirectX::XMFLOAT3 scale;
 
@@ -31,9 +36,18 @@ private:
 	UINT vertexStride;
 	UINT indexCount;
 	WorldBuffer world;
+		
+};
 
-	DirectX::XMFLOAT3 scaleAndTranslate(const DirectX::XMFLOAT3& f) const;
-	DirectX::XMFLOAT3 scaling(const DirectX::XMFLOAT3& f) const;
+class Car: public Box{
+public:
+	Car();
+	Car(DirectX::XMFLOAT3 p, DirectX::XMFLOAT3 s);
+
+	void display(ID3D11DeviceContext* immediateContext);
+
+protected:
+	void initVertex(VertexPosColor vertices[]) const;
 };
 
 #endif

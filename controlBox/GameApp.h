@@ -20,9 +20,9 @@ public:
 	GameApp(HINSTANCE hInstance, int w, int h);
 	~GameApp();
 
+	bool init();
 	void update();
 	void display();
-	bool init();
 
 private:
 	// buffer
@@ -41,7 +41,7 @@ private:
 	ComPtr<ID3D11PixelShader> pixelShader;
 
 	// objects
-	std::vector<Box> boxes;
+	std::vector<Box*> boxes;
 
 	// update
 	float dt;

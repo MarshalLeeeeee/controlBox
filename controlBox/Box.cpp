@@ -25,17 +25,8 @@ Box::Box(DirectX::XMFLOAT3 p, DirectX::XMFLOAT3 s) :
 
 bool Box::init(ID3D11Device* device) {
 	// init vertices buffer
-	VertexPosColor vertices[] =
-	{
-		{ scaleAndTranslate(DirectX::XMFLOAT3(-1.0f, -1.0f, -1.0f)), DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) },
-		{ scaleAndTranslate(DirectX::XMFLOAT3(-1.0f, 1.0f, -1.0f)),  DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) },
-		{ scaleAndTranslate(DirectX::XMFLOAT3(1.0f, 1.0f, -1.0f)),   DirectX::XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) },
-		{ scaleAndTranslate(DirectX::XMFLOAT3(1.0f, -1.0f, -1.0f)),  DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) },
-		{ scaleAndTranslate(DirectX::XMFLOAT3(-1.0f, -1.0f, 1.0f)),  DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) },
-		{ scaleAndTranslate(DirectX::XMFLOAT3(-1.0f, 1.0f, 1.0f)),   DirectX::XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) },
-		{ scaleAndTranslate(DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f)),    DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) },
-		{ scaleAndTranslate(DirectX::XMFLOAT3(1.0f, -1.0f, 1.0f)),   DirectX::XMFLOAT4(0.0f, 1.0f, 1.0f, 1.0f) }
-	};
+	VertexPosColor vertices[8];
+	initVertex(vertices);
 
 	D3D11_BUFFER_DESC vbd;
 	ZeroMemory(&vbd, sizeof(vbd));
@@ -94,6 +85,48 @@ bool Box::init(ID3D11Device* device) {
 }
 
 void Box::display(ID3D11DeviceContext* immediateContext) {
+	/// static box, no update of constant
+
+	// set vertice buffer
+	UINT stride = vertexStride;
+	UINT offset = 0;
+	immediateContext->IASetVertexBuffers(0, 1, vertexBuffer.GetAddressOf(), &stride, &offset);
+
+	// set indice buffer
+	immediateContext->IASetIndexBuffer(indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+
+	// draw index
+	immediateContext->DrawIndexed(indexCount, 0, 0);
+}
+
+DirectX::XMFLOAT3 Box::scaleAndTranslate(const DirectX::XMFLOAT3& f) const {
+	return DirectX::XMFLOAT3(f.x * scale.x + pos.x,
+							 f.y * scale.y + pos.y,
+							 f.z * scale.z + pos.z);
+}
+
+DirectX::XMFLOAT3 Box::scaling(const DirectX::XMFLOAT3& f) const {
+	return DirectX::XMFLOAT3(f.x * scale.x,
+							 f.y * scale.y,
+							 f.z * scale.z);
+}
+
+void Box::initVertex(VertexPosColor vertices[]) const {
+	vertices[0] = { scaleAndTranslate(DirectX::XMFLOAT3(-1.0f, -1.0f, -1.0f)), DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) };
+	vertices[1] = { scaleAndTranslate(DirectX::XMFLOAT3(-1.0f, 1.0f, -1.0f)),  DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) };
+	vertices[2] = { scaleAndTranslate(DirectX::XMFLOAT3(1.0f, 1.0f, -1.0f)),   DirectX::XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) };
+	vertices[3] = { scaleAndTranslate(DirectX::XMFLOAT3(1.0f, -1.0f, -1.0f)),  DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) };
+	vertices[4] = { scaleAndTranslate(DirectX::XMFLOAT3(-1.0f, -1.0f, 1.0f)),  DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) };
+	vertices[5] = { scaleAndTranslate(DirectX::XMFLOAT3(-1.0f, 1.0f, 1.0f)),   DirectX::XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) };
+	vertices[6] = { scaleAndTranslate(DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f)),    DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) };
+	vertices[7] = { scaleAndTranslate(DirectX::XMFLOAT3(1.0f, -1.0f, 1.0f)),   DirectX::XMFLOAT4(0.0f, 1.0f, 1.0f, 1.0f) };
+}
+
+Car::Car() : Box() {}
+
+Car::Car(DirectX::XMFLOAT3 p, DirectX::XMFLOAT3 s) : Box(p, s) {}
+
+void Car::display(ID3D11DeviceContext* immediateContext) {
 	// set vertice buffer
 	UINT stride = vertexStride;
 	UINT offset = 0;
@@ -110,20 +143,19 @@ void Box::display(ID3D11DeviceContext* immediateContext) {
 	D3D11_MAPPED_SUBRESOURCE mappedData;
 	immediateContext->Map(wBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedData);
 	memcpy_s(mappedData.pData, sizeof(world), &world, sizeof(world));
-	immediateContext->Unmap(wBuffer.Get(), 0); 
+	immediateContext->Unmap(wBuffer.Get(), 0);
 
 	// draw index
 	immediateContext->DrawIndexed(indexCount, 0, 0);
 }
 
-DirectX::XMFLOAT3 Box::scaleAndTranslate(const DirectX::XMFLOAT3& f) const {
-	return DirectX::XMFLOAT3(f.x * scale.x + pos.x,
-							 f.y * scale.y + pos.y,
-							 f.z * scale.z + pos.z);
-}
-
-DirectX::XMFLOAT3 Box::scaling(const DirectX::XMFLOAT3& f) const {
-	return DirectX::XMFLOAT3(f.x * scale.x,
-							 f.y * scale.y,
-							 f.z * scale.z);
+void Car::initVertex(VertexPosColor vertices[]) const {
+	vertices[0] = { scaleAndTranslate(DirectX::XMFLOAT3(-1.0f, -1.0f, -1.0f)), DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) };
+	vertices[1] = { scaleAndTranslate(DirectX::XMFLOAT3(-1.0f, 1.0f, -1.0f)),  DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) };
+	vertices[2] = { scaleAndTranslate(DirectX::XMFLOAT3(1.0f, 1.0f, -1.0f)),   DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) };
+	vertices[3] = { scaleAndTranslate(DirectX::XMFLOAT3(1.0f, -1.0f, -1.0f)),  DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) };
+	vertices[4] = { scaleAndTranslate(DirectX::XMFLOAT3(-1.0f, -1.0f, 1.0f)),  DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) };
+	vertices[5] = { scaleAndTranslate(DirectX::XMFLOAT3(-1.0f, 1.0f, 1.0f)),   DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) };
+	vertices[6] = { scaleAndTranslate(DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f)),    DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) };
+	vertices[7] = { scaleAndTranslate(DirectX::XMFLOAT3(1.0f, -1.0f, 1.0f)),   DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) };
 }
