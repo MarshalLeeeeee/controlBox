@@ -80,7 +80,6 @@ bool Box::init(ID3D11Device* device) {
 
 	// init rigid transform
 	world.world = DirectX::XMMatrixTranspose(DirectX::XMMatrixTranslation(pos.x, pos.y, pos.z));
-	//world.world = DirectX::XMMatrixIdentity();
 
 	return true;
 }
@@ -136,8 +135,6 @@ Car::Car() : Box() {}
 Car::Car(DirectX::XMFLOAT3 p, DirectX::XMFLOAT3 s) : Box(p, s) {}
 
 void Car::display(ID3D11DeviceContext* immediateContext, DirectX::XMMATRIX& m) {
-	/// m is the view matrix
-
 	// set vertice buffer
 	UINT stride = vertexStride;
 	UINT offset = 0;
@@ -151,7 +148,7 @@ void Car::display(ID3D11DeviceContext* immediateContext, DirectX::XMMATRIX& m) {
 	immediateContext->VSGetConstantBuffers(0, 1, wBuffer.GetAddressOf());
 
 	// update world buffer
-	//followView(m);
+	followView(m);
 	D3D11_MAPPED_SUBRESOURCE mappedData;
 	immediateContext->Map(wBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedData);
 	memcpy_s(mappedData.pData, sizeof(world), &world, sizeof(world));
@@ -173,5 +170,11 @@ void Car::initVertex(VertexPosColor vertices[]) const {
 }
 
 void Car::followView(DirectX::XMMATRIX& m) {
-	world.world = DirectX::XMMatrixTranslation(2.0, -2.0, 0.0) * DirectX::XMMatrixRotationY(-90) * m;
+	world.world =
+		DirectX::XMMatrixInverse(nullptr, m) * 
+		DirectX::XMMatrixTranspose(DirectX::XMMatrixLookToLH(
+			DirectX::XMVectorSet(-2.0f, 2.0f, 0.0f, 0.0f),
+			DirectX::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f),
+			DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f))) * 
+		DirectX::XMMatrixTranspose(DirectX::XMMatrixTranslation(pos.x, pos.y, pos.z));
 }
