@@ -17,9 +17,12 @@ GameApp::GameApp(HINSTANCE hInstance, int w, int h) :
 	vertexLayout(nullptr),
 	vertexShader(nullptr),
 	pixelShader(nullptr) {
-	boxes.push_back(Box());
-	boxes.push_back(Box(DirectX::XMFLOAT3(0.0, -4.0, 0.0), DirectX::XMFLOAT3(0.5, 0.5, 0.5)));
-	boxes.push_back(Box(DirectX::XMFLOAT3(0.0, -8.0, 0.0), DirectX::XMFLOAT3(0.25, 0.25, 0.25)));
+	boxes.push_back(new Car(DirectX::XMFLOAT3(0.0, 0.7, 0.0), DirectX::XMFLOAT3(1.5, 0.7, 0.7)));
+	boxes.push_back(new Box(DirectX::XMFLOAT3(0.0, 20.0, 20.0), DirectX::XMFLOAT3(20, 20, 0.1)));
+	boxes.push_back(new Box(DirectX::XMFLOAT3(0.0, 20.0, -20.0), DirectX::XMFLOAT3(20, 20, 0.1)));
+	boxes.push_back(new Box(DirectX::XMFLOAT3(20.0, 20.0, 0.0), DirectX::XMFLOAT3(0.1, 20, 20)));
+	boxes.push_back(new Box(DirectX::XMFLOAT3(-20.0, 20.0, 0.0), DirectX::XMFLOAT3(0.1, 20, 20)));
+	boxes.push_back(new Box(DirectX::XMFLOAT3(0.0, -0.1, 0.0), DirectX::XMFLOAT3(20, 0.1, 20)));
 
 }
 
@@ -56,7 +59,7 @@ void GameApp::display() {
 
 	// display every object
 	for (auto& b : boxes) {
-		b.display(immediateContext.Get());
+		b->display(immediateContext.Get());
 	}
 
 	swapChain->Present(0, 0);
@@ -232,8 +235,8 @@ bool GameApp::initResource() {
 	}
 
 	// set constant buffers
-	eye = DirectX::XMFLOAT3(5.0, 5.0, 5.0);
-	drt = DirectX::XMFLOAT3(-5.0, -5.0, -5.0);
+	eye = DirectX::XMFLOAT3(-2.0, 2.0, 0.0);
+	drt = DirectX::XMFLOAT3(1.0, 0.0, 0.0);
 	//normalizeDrt();
 	world.world = DirectX::XMMatrixIdentity();
 	updateView();
@@ -241,7 +244,7 @@ bool GameApp::initResource() {
 		DirectX::XMMatrixPerspectiveFovLH(
 			DirectX::XM_PIDIV2,
 			static_cast<float>(Constant::width) / Constant::height,
-			1.0f,
+			0.1f,
 			1000.0f)
 	);
 
@@ -267,7 +270,7 @@ bool GameApp::initResource() {
 
 	// init every object
 	for (auto& b : boxes) {
-		if (!b.init(device.Get())) return false;
+		if (!b->init(device.Get())) return false;
 	}
 	
 	// set topology structure
@@ -306,12 +309,12 @@ void GameApp::backward() {
 }
 
 void GameApp::turnRight() {
-	view.view = DirectX::XMMatrixRotationY(dt) * view.view;
+	view.view = DirectX::XMMatrixRotationY(0.5*dt) * view.view;
 	normalizeDrt();
 }
 
 void GameApp::turnLeft() {
-	view.view = DirectX::XMMatrixRotationY(-dt) * view.view;
+	view.view = DirectX::XMMatrixRotationY(-0.5*dt) * view.view;
 	normalizeDrt();
 }
 
