@@ -59,7 +59,7 @@ void GameApp::display() {
 
 	// display every object
 	for (auto& b : boxes) {
-		b->display(immediateContext.Get());
+		b->display(immediateContext.Get(), view.view);
 	}
 
 	swapChain->Present(0, 0);
@@ -235,9 +235,8 @@ bool GameApp::initResource() {
 	}
 
 	// set constant buffers
-	eye = DirectX::XMFLOAT3(-2.0, 2.0, 0.0);
-	drt = DirectX::XMFLOAT3(1.0, 0.0, 0.0);
-	//normalizeDrt();
+	eye = DirectX::XMFLOAT3(-2.0f, 2.0f, 0.0f);
+	drt = DirectX::XMFLOAT3(1.0f, 0.0f, 0.0f);
 	world.world = DirectX::XMMatrixIdentity();
 	updateView();
 	proj.proj = DirectX::XMMatrixTranspose(
@@ -309,12 +308,12 @@ void GameApp::backward() {
 }
 
 void GameApp::turnRight() {
-	view.view = DirectX::XMMatrixRotationY(0.5*dt) * view.view;
+	view.view = DirectX::XMMatrixRotationY(0.5 * dt) * view.view;
 	normalizeDrt();
 }
 
 void GameApp::turnLeft() {
-	view.view = DirectX::XMMatrixRotationY(-0.5*dt) * view.view;
+	view.view = DirectX::XMMatrixRotationY(-0.5 * dt) * view.view;
 	normalizeDrt();
 }
 
