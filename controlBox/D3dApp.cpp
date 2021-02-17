@@ -7,9 +7,9 @@
 
 #include "D3dApp.h"
 
-//namespace {
-//	D3dApp* thisptr = nullptr;
-//}
+namespace {
+	D3dApp* thisptr = nullptr;
+}
 
 D3dApp::D3dApp(HINSTANCE hInstance, int w, int h) :
 	instance(hInstance),
@@ -22,12 +22,14 @@ D3dApp::D3dApp(HINSTANCE hInstance, int w, int h) :
 	renderTargetView(nullptr),
 	depthStencilView(nullptr),
 	depthStencilBuffer(nullptr) {
-	//thisptr = this; 
+	thisptr = this; 
 }
 
 D3dApp::~D3dApp() {}
 
 bool D3dApp::init() {
+	mouse = std::make_unique<DirectX::Mouse>();
+	keyboard = std::make_unique<DirectX::Keyboard>();
 	if (!initWindow()) return false;
 	if (!initD3d()) return false;
 	return true;
@@ -48,10 +50,9 @@ int D3dApp::run() {
 	return (int)msg.wParam;
 }
 
-//LRESULT CALLBACK mainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-//	//return thisptr->wndProc(hwnd, msg, wParam, lParam);
-//	return D3dApp::wndProc(hwnd, msg, wParam, lParam);
-//}
+LRESULT CALLBACK mainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+	return thisptr->wndProc(hwnd, msg, wParam, lParam);
+}
 
 LRESULT CALLBACK D3dApp::wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	switch (msg) {
@@ -59,9 +60,33 @@ LRESULT CALLBACK D3dApp::wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
 		PostQuitMessage(0);
 		break;
 
-	case WM_KEYDOWN:
+	/*case WM_KEYDOWN:
 		if (wParam == VK_ESCAPE) DestroyWindow(hwnd);
-		break;
+		break;*/
+	case WM_INPUT:
+
+	case WM_LBUTTONDOWN:
+	case WM_MBUTTONDOWN:
+	case WM_RBUTTONDOWN:
+	case WM_XBUTTONDOWN:
+
+	case WM_LBUTTONUP:
+	case WM_MBUTTONUP:
+	case WM_RBUTTONUP:
+	case WM_XBUTTONUP:
+
+	case WM_MOUSEWHEEL:
+	case WM_MOUSEHOVER:
+	case WM_MOUSEMOVE:
+		mouse->ProcessMessage(msg, wParam, lParam);
+		return 0;
+
+	case WM_KEYDOWN:
+	case WM_SYSKEYDOWN:
+	case WM_KEYUP:
+	case WM_SYSKEYUP:
+		keyboard->ProcessMessage(msg, wParam, lParam);
+		return 0;
 	}
 	return ::DefWindowProc(hwnd, msg, wParam, lParam);
 }
@@ -71,8 +96,7 @@ bool D3dApp::initWindow() {
 	// create window class and register
 	WNDCLASS wc;
 	wc.style = CS_HREDRAW | CS_VREDRAW;
-	//wc.lpfnWndProc = mainWndProc;
-	wc.lpfnWndProc = D3dApp::wndProc;
+	wc.lpfnWndProc = mainWndProc;
 	wc.cbClsExtra = 0;
 	wc.cbWndExtra = 0;
 	wc.hInstance = instance;

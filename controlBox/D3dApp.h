@@ -18,6 +18,9 @@
 #include <d3d11.h>
 #include <d3dcompiler.h>
 
+#include "Mouse.h"
+#include "Keyboard.h"
+
 #pragma comment(lib, "d3d11.lib")
 #pragma comment(lib, "d3dcompiler.lib")
 #pragma comment(lib, "dxguid.lib")
@@ -31,7 +34,7 @@ public:
 	int run();
 	virtual bool init();
 	virtual void display() = 0;
-	static LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+	LRESULT CALLBACK wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 protected:
 	bool initWindow();
@@ -50,6 +53,11 @@ protected:
 	ComPtr<ID3D11RenderTargetView> renderTargetView;
 	ComPtr<ID3D11DepthStencilView> depthStencilView;
 	ComPtr<ID3D11DeviceContext> immediateContext;
+
+	std::unique_ptr<DirectX::Mouse> mouse;
+	DirectX::Mouse::ButtonStateTracker mouseTracker;
+	std::unique_ptr<DirectX::Keyboard> keyboard;
+	DirectX::Keyboard::KeyboardStateTracker keyboardTracker;
 
 	HINSTANCE instance;
 	HWND window;
