@@ -18,8 +18,10 @@ struct ProjBuffer {
 
 class Constant {
 public:
-	static const int width = 1280;
-	static const int height = 960;
+	static const int width;
+	static const int height;
+	static const float dt;
+	static const float bound;
 };
 
 #endif
