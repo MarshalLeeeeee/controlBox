@@ -44,6 +44,7 @@ int D3dApp::run() {
 			DispatchMessage(&msg);
 		}
 		else {
+			update();
 			display();
 		}
 	}
@@ -85,6 +86,11 @@ LRESULT CALLBACK D3dApp::wndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPar
 	case WM_SYSKEYDOWN:
 	case WM_KEYUP:
 	case WM_SYSKEYUP:
+		keyboard->ProcessMessage(msg, wParam, lParam);
+		return 0;
+
+	case WM_ACTIVATEAPP:
+		mouse->ProcessMessage(msg, wParam, lParam);
 		keyboard->ProcessMessage(msg, wParam, lParam);
 		return 0;
 	}

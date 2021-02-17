@@ -13,22 +13,27 @@
 #include "Box.h"
 #include <vector>
 
+enum BufferType {WORLD, VIEW, PROJ};
+
 class GameApp : public D3dApp {
 public:
 	GameApp(HINSTANCE hInstance, int w, int h);
 	~GameApp();
 
+	void update();
 	void display();
 	bool init();
 
 private:
 	// buffer
-	ComPtr<ID3D11Buffer> worldBuffer;
-	ComPtr<ID3D11Buffer> viewBuffer;
-	ComPtr<ID3D11Buffer> projBuffer;
+	ComPtr<ID3D11Buffer> worldBuffer; // local to world
+	ComPtr<ID3D11Buffer> viewBuffer; // world to view
+	ComPtr<ID3D11Buffer> projBuffer; // view to proj
 	WorldBuffer world;
 	ViewBuffer view;
 	ProjBuffer proj;
+	DirectX::XMFLOAT3 eye;
+	DirectX::XMFLOAT3 drt;
 
 	// shader
 	ComPtr<ID3D11InputLayout> vertexLayout;
@@ -38,8 +43,21 @@ private:
 	// objects
 	std::vector<Box> boxes;
 
+	// update
+	float dt;
+	void forward();
+	void backward();
+	void turnRight();
+	void turnLeft();
+	void updateView();
+
+	// init method
 	bool initEffect();
 	bool initResource();
+
+	// math operation
+	DirectX::XMVECTOR toVector(const DirectX::XMFLOAT3& f) const;
+	void normalizeDrt();
 };
 
 #endif

@@ -13,6 +13,7 @@ GameApp::GameApp(HINSTANCE hInstance, int w, int h) :
 	worldBuffer(nullptr), world(),
 	viewBuffer(nullptr), view(),
 	projBuffer(nullptr), proj(),
+	eye(), drt(), dt(0.001),
 	vertexLayout(nullptr),
 	vertexShader(nullptr),
 	pixelShader(nullptr) {
@@ -23,6 +24,26 @@ GameApp::GameApp(HINSTANCE hInstance, int w, int h) :
 }
 
 GameApp::~GameApp() {}
+
+void GameApp::update() {
+	DirectX::Mouse::State mouseState = mouse->GetState();
+	DirectX::Mouse::State lastMouseState = mouseTracker.GetLastState();
+
+	DirectX::Keyboard::State keyState = keyboard->GetState();
+	keyboardTracker.Update(keyState);
+
+	if (keyState.IsKeyDown(DirectX::Keyboard::W)) forward();
+	if (keyState.IsKeyDown(DirectX::Keyboard::A)) turnLeft();
+	if (keyState.IsKeyDown(DirectX::Keyboard::S)) backward();
+	if (keyState.IsKeyDown(DirectX::Keyboard::D)) turnRight();
+	if (keyState.IsKeyDown(DirectX::Keyboard::Escape)) SendMessage(window, WM_DESTROY, 0, 0);
+
+	// todo: update view 
+	D3D11_MAPPED_SUBRESOURCE mappedDataView;
+	immediateContext->Map(viewBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedDataView);
+	memcpy_s(mappedDataView.pData, sizeof(view), &view, sizeof(view));
+	immediateContext->Unmap(viewBuffer.Get(), 0);
+}
 
 void GameApp::display() {
 	assert(immediateContext);
@@ -45,6 +66,8 @@ bool GameApp::init() {
 	if (!D3dApp::init()) return false;
 	if (!initEffect()) return false;
 	if (!initResource()) return false;
+	mouse->SetWindow(window);
+	mouse->SetMode(DirectX::Mouse::MODE_RELATIVE);
 	return true;
 }
 
@@ -209,13 +232,11 @@ bool GameApp::initResource() {
 	}
 
 	// set constant buffers
+	eye = DirectX::XMFLOAT3(5.0, 5.0, 5.0);
+	drt = DirectX::XMFLOAT3(-5.0, -5.0, -5.0);
+	//normalizeDrt();
 	world.world = DirectX::XMMatrixIdentity();
-	view.view = DirectX::XMMatrixTranspose(
-		DirectX::XMMatrixLookAtLH(
-			DirectX::XMVectorSet(5.0f, 5.0f, 5.0f, 0.0f),
-			DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f),
-			DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f))
-	);
+	updateView();
 	proj.proj = DirectX::XMMatrixTranspose(
 		DirectX::XMMatrixPerspectiveFovLH(
 			DirectX::XM_PIDIV2,
@@ -240,9 +261,9 @@ bool GameApp::initResource() {
 	immediateContext->Unmap(projBuffer.Get(), 0);
 
 	// bind constant buffers to vertex shader
-	immediateContext->VSSetConstantBuffers(0, 1, worldBuffer.GetAddressOf());
-	immediateContext->VSSetConstantBuffers(1, 1, viewBuffer.GetAddressOf());
-	immediateContext->VSSetConstantBuffers(2, 1, projBuffer.GetAddressOf());
+	immediateContext->VSSetConstantBuffers(BufferType::WORLD, 1, worldBuffer.GetAddressOf());
+	immediateContext->VSSetConstantBuffers(BufferType::VIEW , 1, viewBuffer.GetAddressOf());
+	immediateContext->VSSetConstantBuffers(BufferType::PROJ , 1, projBuffer.GetAddressOf());
 
 	// init every object
 	for (auto& b : boxes) {
@@ -258,4 +279,48 @@ bool GameApp::initResource() {
 	immediateContext->PSSetShader(pixelShader.Get(), nullptr, 0);
 
 	return true;
+}
+
+DirectX::XMVECTOR GameApp::toVector(const DirectX::XMFLOAT3& f) const {
+	return DirectX::XMVectorSet(f.x, f.y, f.z, 0.0);
+}
+
+void GameApp::normalizeDrt() {
+	drt.x = DirectX::XMVectorGetX(view.view.r[2]);
+	drt.y = DirectX::XMVectorGetY(view.view.r[2]);
+	drt.z = DirectX::XMVectorGetZ(view.view.r[2]);
+}
+
+void GameApp::forward() {
+	eye.x = eye.x + dt * drt.x;
+	eye.y = eye.y + dt * drt.y;
+	eye.z = eye.z + dt * drt.z;
+	updateView();
+}
+
+void GameApp::backward() {
+	eye.x = eye.x - dt * drt.x;
+	eye.y = eye.y - dt * drt.y;
+	eye.z = eye.z - dt * drt.z;
+	updateView();
+}
+
+void GameApp::turnRight() {
+	view.view = DirectX::XMMatrixRotationY(dt) * view.view;
+	normalizeDrt();
+}
+
+void GameApp::turnLeft() {
+	view.view = DirectX::XMMatrixRotationY(-dt) * view.view;
+	normalizeDrt();
+}
+
+void GameApp::updateView() {
+	view.view = DirectX::XMMatrixTranspose(
+		DirectX::XMMatrixLookToLH(
+			toVector(eye),
+			toVector(drt),
+			DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f))
+	);
+	normalizeDrt();
 }
