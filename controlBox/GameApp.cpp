@@ -59,7 +59,7 @@ void GameApp::display() {
 
 	// display every object
 	for (auto& b : boxes) {
-		b->display(immediateContext.Get());
+		b->display(immediateContext.Get(), view.view);
 	}
 
 	swapChain->Present(0, 0);

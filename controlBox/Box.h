@@ -20,7 +20,7 @@ public:
 	Box(DirectX::XMFLOAT3 p, DirectX::XMFLOAT3 s);
 
 	bool init(ID3D11Device* device);
-	virtual void display(ID3D11DeviceContext* immediateContext);
+	virtual void display(ID3D11DeviceContext* immediateContext, DirectX::XMMATRIX& m);
 
 protected:
 	virtual void initVertex(VertexPosColor vertices[]) const;
@@ -44,10 +44,11 @@ public:
 	Car();
 	Car(DirectX::XMFLOAT3 p, DirectX::XMFLOAT3 s);
 
-	void display(ID3D11DeviceContext* immediateContext);
+	void display(ID3D11DeviceContext* immediateContext, DirectX::XMMATRIX& m);
 
 protected:
 	void initVertex(VertexPosColor vertices[]) const;
+	void followView(DirectX::XMMATRIX& m);
 };
 
 #endif
