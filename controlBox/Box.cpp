@@ -85,6 +85,7 @@ bool Box::init(ID3D11Device* device) {
 }
 
 bool Box::update(DirectX::XMMATRIX& m) {
+	// no collision detection for static objects
 	return true;
 }
 
@@ -139,8 +140,11 @@ Car::Car() : Box() {}
 Car::Car(DirectX::XMFLOAT3 p, DirectX::XMFLOAT3 s) : Box(p, s) {}
 
 bool Car::update(DirectX::XMMATRIX& m) {
+	// store the initial value and update
 	DirectX::XMMATRIX oldWorld = world.world;
 	followView(m);
+
+	// if collide, abandon the update
 	if (collide()) {
 		world.world = oldWorld;
 		return false;
@@ -172,6 +176,7 @@ void Car::display(ID3D11DeviceContext* immediateContext) {
 }
 
 void Car::initVertex(VertexPosColor vertices[]) const {
+	// color: black and white
 	vertices[0] = { scaling(DirectX::XMFLOAT3(-1.0f, -1.0f, -1.0f)), DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) };
 	vertices[1] = { scaling(DirectX::XMFLOAT3(-1.0f, 1.0f, -1.0f)),  DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) };
 	vertices[2] = { scaling(DirectX::XMFLOAT3(1.0f, 1.0f, -1.0f)),   DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) };
@@ -183,6 +188,8 @@ void Car::initVertex(VertexPosColor vertices[]) const {
 }
 
 void Car::followView(DirectX::XMMATRIX& m) {
+	// keep the relative position between camera center and car
+	// initial local2view * inverse(current world2view)
 	world.world =
 		DirectX::XMMatrixInverse(nullptr, m) * 
 		DirectX::XMMatrixTranspose(DirectX::XMMatrixLookToLH(
@@ -193,32 +200,6 @@ void Car::followView(DirectX::XMMATRIX& m) {
 }
 
 bool Car::collide() {
-	/*
-	float posx = pos.x;
-	float posy = pos.y;
-	float posz = pos.z;
-
-	float m00 = DirectX::XMVectorGetX(world.world.r[0]);
-	float m01 = DirectX::XMVectorGetY(world.world.r[0]);
-	float m02 = DirectX::XMVectorGetZ(world.world.r[0]);
-	float m03 = DirectX::XMVectorGetW(world.world.r[0]);
-
-	float m10 = DirectX::XMVectorGetX(world.world.r[1]);
-	float m11 = DirectX::XMVectorGetY(world.world.r[1]);
-	float m12 = DirectX::XMVectorGetZ(world.world.r[1]);
-	float m13 = DirectX::XMVectorGetW(world.world.r[1]);
-
-	float m20 = DirectX::XMVectorGetX(world.world.r[2]);
-	float m21 = DirectX::XMVectorGetY(world.world.r[2]);
-	float m22 = DirectX::XMVectorGetZ(world.world.r[2]);
-	float m23 = DirectX::XMVectorGetW(world.world.r[2]);
-
-	float m30 = DirectX::XMVectorGetX(world.world.r[3]);
-	float m31 = DirectX::XMVectorGetY(world.world.r[3]);
-	float m32 = DirectX::XMVectorGetZ(world.world.r[3]);
-	float m33 = DirectX::XMVectorGetW(world.world.r[3]);
-	*/
-
 	DirectX::XMFLOAT3 f;
 	DirectX::XMVECTOR v;
 	float vx, vy, vz, vw;
@@ -229,7 +210,6 @@ bool Car::collide() {
 	vz = DirectX::XMVectorGetZ(v);
 	vw = DirectX::XMVectorGetW(v);
 	if (vx / vw <= -Constant::bound || vx / vw >= Constant::bound) return true;
-	//if (vy / vw <= -Constant::bound || vy / vw >= Constant::bound) return true;
 	if (vz / vw <= -Constant::bound || vz / vw >= Constant::bound) return true;
 
 	f = scaling(DirectX::XMFLOAT3(-1.0f, -1.0f, 1.0f));
@@ -239,7 +219,6 @@ bool Car::collide() {
 	vz = DirectX::XMVectorGetZ(v);
 	vw = DirectX::XMVectorGetW(v);
 	if (vx / vw <= -Constant::bound || vx / vw >= Constant::bound) return true;
-	//if (vy / vw <= -Constant::bound || vy / vw >= Constant::bound) return true;
 	if (vz / vw <= -Constant::bound || vz / vw >= Constant::bound) return true;
 
 	f = scaling(DirectX::XMFLOAT3(1.0f, -1.0f, -1.0f));
@@ -249,7 +228,6 @@ bool Car::collide() {
 	vz = DirectX::XMVectorGetZ(v);
 	vw = DirectX::XMVectorGetW(v);
 	if (vx / vw <= -Constant::bound || vx / vw >= Constant::bound) return true;
-	//if (vy / vw <= -Constant::bound || vy / vw >= Constant::bound) return true;
 	if (vz / vw <= -Constant::bound || vz / vw >= Constant::bound) return true;
 
 	f = scaling(DirectX::XMFLOAT3(1.0f, -1.0f, 1.0f));
@@ -259,97 +237,7 @@ bool Car::collide() {
 	vz = DirectX::XMVectorGetZ(v);
 	vw = DirectX::XMVectorGetW(v);
 	if (vx / vw <= -Constant::bound || vx / vw >= Constant::bound) return true;
-	//if (vy / vw <= -Constant::bound || vy / vw >= Constant::bound) return true;
 	if (vz / vw <= -Constant::bound || vz / vw >= Constant::bound) return true;
-
-	/*DirectX::XMFLOAT3 f;
-	DirectX::XMVECTOR v;
-	f = scaling(DirectX::XMFLOAT3(-1.0f, -1.0f, -1.0f));
-	v = DirectX::XMVector4Transform(DirectX::XMVectorSet(f.x, f.z, f.y, 0.0f), world.world);
-	if (DirectX::XMVectorGetX(v) <= -Constant::bound || DirectX::XMVectorGetX(v) >= Constant::bound) return true;
-	if (DirectX::XMVectorGetZ(v) <= -Constant::bound || DirectX::XMVectorGetZ(v) >= Constant::bound) return true;
-
-	f = scaling(DirectX::XMFLOAT3(-1.0f, 1.0f, -1.0f));
-	v = DirectX::XMVector4Transform(DirectX::XMVectorSet(f.x, f.z, f.y, 0.0f), world.world);
-	if (DirectX::XMVectorGetX(v) <= -Constant::bound || DirectX::XMVectorGetX(v) >= Constant::bound) return true;
-	if (DirectX::XMVectorGetZ(v) <= -Constant::bound || DirectX::XMVectorGetZ(v) >= Constant::bound) return true;
-
-	f = scaling(DirectX::XMFLOAT3(1.0f, -1.0f, -1.0f));
-	v = DirectX::XMVector4Transform(DirectX::XMVectorSet(f.x, f.z, f.y, 0.0f), world.world);
-	if (DirectX::XMVectorGetX(v) <= -Constant::bound || DirectX::XMVectorGetX(v) >= Constant::bound) return true;
-	if (DirectX::XMVectorGetZ(v) <= -Constant::bound || DirectX::XMVectorGetZ(v) >= Constant::bound) return true;
-
-	f = scaling(DirectX::XMFLOAT3(1.0f, 1.0f, -1.0f));
-	v = DirectX::XMVector4Transform(DirectX::XMVectorSet(f.x, f.z, f.y, 0.0f), world.world);
-	if (DirectX::XMVectorGetX(v) <= -Constant::bound || DirectX::XMVectorGetX(v) >= Constant::bound) return true;
-	if (DirectX::XMVectorGetZ(v) <= -Constant::bound || DirectX::XMVectorGetZ(v) >= Constant::bound) return true;*/
-
-	/*DirectX::XMFLOAT3 f;
-	DirectX::XMVECTOR v;
-	f = scaling(DirectX::XMFLOAT3(-1.0f, -1.0f, -1.0f));
-	v = DirectX::XMVector4Transform(DirectX::XMVectorSet(f.x, f.y, f.z, 0.0f), world.world);
-	if (DirectX::XMVectorGetX(v) <= -Constant::bound || DirectX::XMVectorGetX(v) >= Constant::bound) return true;
-	if (DirectX::XMVectorGetY(v) <= -Constant::bound || DirectX::XMVectorGetY(v) >= Constant::bound) return true;
-
-	f = scaling(DirectX::XMFLOAT3(-1.0f, 1.0f, -1.0f));
-	v = DirectX::XMVector4Transform(DirectX::XMVectorSet(f.x, f.y, f.z, 0.0f), world.world);
-	if (DirectX::XMVectorGetX(v) <= -Constant::bound || DirectX::XMVectorGetX(v) >= Constant::bound) return true;
-	if (DirectX::XMVectorGetY(v) <= -Constant::bound || DirectX::XMVectorGetY(v) >= Constant::bound) return true;
-
-	f = scaling(DirectX::XMFLOAT3(1.0f, -1.0f, -1.0f));
-	v = DirectX::XMVector4Transform(DirectX::XMVectorSet(f.x, f.y, f.z, 0.0f), world.world);
-	if (DirectX::XMVectorGetX(v) <= -Constant::bound || DirectX::XMVectorGetX(v) >= Constant::bound) return true;
-	if (DirectX::XMVectorGetY(v) <= -Constant::bound || DirectX::XMVectorGetY(v) >= Constant::bound) return true;
-
-	f = scaling(DirectX::XMFLOAT3(1.0f, 1.0f, -1.0f));
-	v = DirectX::XMVector4Transform(DirectX::XMVectorSet(f.x, f.y, f.z, 0.0f), world.world);
-	if (DirectX::XMVectorGetX(v) <= -Constant::bound || DirectX::XMVectorGetX(v) >= Constant::bound) return true;
-	if (DirectX::XMVectorGetY(v) <= -Constant::bound || DirectX::XMVectorGetY(v) >= Constant::bound) return true;*/
-
-
-	/*DirectX::XMFLOAT3 f;
-	DirectX::XMVECTOR v;
-	float fv;
-	f = scaling(DirectX::XMFLOAT3(-1.0f, -1.0f, -1.0f));
-	v = DirectX::XMVector4Dot(DirectX::XMVectorSet(f.x, f.y, f.z, 0.0f), world.world.r[0]);
-	fv = DirectX::XMVectorGetX(v);
-
-	if (DirectX::XMVectorGetX(v) <= -Constant::bound || DirectX::XMVectorGetX(v) >= Constant::bound) return true;
-	v = DirectX::XMVector4Dot(DirectX::XMVectorSet(f.x, f.y, f.z, 0.0f), world.world.r[1]);
-	fv = DirectX::XMVectorGetX(v);
-
-	if (DirectX::XMVectorGetX(v) <= -Constant::bound || DirectX::XMVectorGetX(v) >= Constant::bound) return true;
-
-	f = scaling(DirectX::XMFLOAT3(-1.0f, 1.0f, -1.0f));
-	v = DirectX::XMVector4Dot(DirectX::XMVectorSet(f.x, f.y, f.z, 0.0f), world.world.r[0]);
-	fv = DirectX::XMVectorGetX(v);
-
-	if (DirectX::XMVectorGetX(v) <= -Constant::bound || DirectX::XMVectorGetX(v) >= Constant::bound) return true;
-	v = DirectX::XMVector4Dot(DirectX::XMVectorSet(f.x, f.y, f.z, 0.0f), world.world.r[1]);
-	fv = DirectX::XMVectorGetX(v);
-
-	if (DirectX::XMVectorGetX(v) <= -Constant::bound || DirectX::XMVectorGetX(v) >= Constant::bound) return true;
-
-	f = scaling(DirectX::XMFLOAT3(1.0f, -1.0f, -1.0f));
-	v = DirectX::XMVector4Dot(DirectX::XMVectorSet(f.x, f.y, f.z, 0.0f), world.world.r[0]);
-	fv = DirectX::XMVectorGetX(v);
-
-	if (DirectX::XMVectorGetX(v) <= -Constant::bound || DirectX::XMVectorGetX(v) >= Constant::bound) return true;
-	v = DirectX::XMVector4Dot(DirectX::XMVectorSet(f.x, f.y, f.z, 0.0f), world.world.r[1]);
-	fv = DirectX::XMVectorGetX(v);
-
-	if (DirectX::XMVectorGetX(v) <= -Constant::bound || DirectX::XMVectorGetX(v) >= Constant::bound) return true;
-
-	f = scaling(DirectX::XMFLOAT3(1.0f, 1.0f, -1.0f));
-	v = DirectX::XMVector4Dot(DirectX::XMVectorSet(f.x, f.y, f.z, 0.0f), world.world.r[0]);
-	fv = DirectX::XMVectorGetX(v);
-
-	if (DirectX::XMVectorGetX(v) <= -Constant::bound || DirectX::XMVectorGetX(v) >= Constant::bound) return true;
-	v = DirectX::XMVector4Dot(DirectX::XMVectorSet(f.x, f.y, f.z, 0.0f), world.world.r[1]);
-	fv = DirectX::XMVectorGetX(v);
-
-	if (DirectX::XMVectorGetX(v) <= -Constant::bound || DirectX::XMVectorGetX(v) >= Constant::bound) return true;*/
-
 
 	return false;
 }

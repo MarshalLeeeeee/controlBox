@@ -13,10 +13,14 @@ GameApp::GameApp(HINSTANCE hInstance, int w, int h) :
 	worldBuffer(nullptr), world(),
 	viewBuffer(nullptr), view(),
 	projBuffer(nullptr), proj(),
-	eye(), drt(), dt(Constant::dt), bound(Constant::bound),
+	eye(), drt(), dt(Constant::dt), bound(Constant::bound), 
+	relView(), xangle(0.0), yangle(0.0),
 	vertexLayout(nullptr),
 	vertexShader(nullptr),
 	pixelShader(nullptr) {
+
+	// insert objects to the scene
+	// dynamic binding
 	boxes.push_back(new Car(DirectX::XMFLOAT3(0.0, 0.7, 0.0), DirectX::XMFLOAT3(1.5, 0.7, 0.7)));
 	boxes.push_back(new Box(DirectX::XMFLOAT3(0.0, bound, bound), DirectX::XMFLOAT3(bound, bound, 0.01)));
 	boxes.push_back(new Box(DirectX::XMFLOAT3(0.0, bound, -bound), DirectX::XMFLOAT3(bound, bound, 0.01)));
@@ -29,32 +33,46 @@ GameApp::GameApp(HINSTANCE hInstance, int w, int h) :
 GameApp::~GameApp() {}
 
 void GameApp::update() {
+	// get mouse state
 	DirectX::Mouse::State mouseState = mouse->GetState();
 	DirectX::Mouse::State lastMouseState = mouseTracker.GetLastState();
 
+	// get keyboard state
 	DirectX::Keyboard::State keyState = keyboard->GetState();
 	keyboardTracker.Update(keyState);
 
+	// store old value in case of collision
 	DirectX::XMFLOAT3 oldEye = eye;
 	DirectX::XMFLOAT3 oldDrt = drt;;
-	DirectX::XMMATRIX oldView = view.view;
+	DirectX::XMMATRIX oldView = relView;
 
+	// key events
 	if (keyState.IsKeyDown(DirectX::Keyboard::W)) forward();
 	if (keyState.IsKeyDown(DirectX::Keyboard::A)) turnLeft();
 	if (keyState.IsKeyDown(DirectX::Keyboard::S)) backward();
 	if (keyState.IsKeyDown(DirectX::Keyboard::D)) turnRight();
 	if (keyState.IsKeyDown(DirectX::Keyboard::Escape)) SendMessage(window, WM_DESTROY, 0, 0);
 
+	// mouse events
+	if (mouseState.positionMode == DirectX::Mouse::MODE_RELATIVE) {
+		xangle += mouseState.y * dt;
+		yangle += mouseState.x * dt;
+	}
+
+	// update object transformation
 	for (auto& b : boxes) {
-		if (!b->update(view.view)) {
+		// implicitly do collision detection
+		// if collide, abandon all update and do not update view buffer
+		if (!b->update(relView)) {
 			eye = oldEye;
 			drt = oldDrt;
-			view.view = oldView;
+			relView = oldView;
 			return;
 		}
 	}
 
-	// update view 
+	// update view buffer
+	view.view = DirectX::XMMatrixRotationX(xangle) * DirectX::XMMatrixRotationY(yangle) * relView;
 	D3D11_MAPPED_SUBRESOURCE mappedDataView;
 	immediateContext->Map(viewBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedDataView);
 	memcpy_s(mappedDataView.pData, sizeof(view), &view, sizeof(view));
@@ -125,106 +143,6 @@ bool GameApp::initEffect() {
 }
 
 bool GameApp::initResource() {
-	/*
-	// init vertices buffer
-	VertexPosColor vertices[] =
-	{
-		{ DirectX::XMFLOAT3(-1.0f, -1.0f, -1.0f), DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) },
-		{ DirectX::XMFLOAT3(-1.0f, 1.0f, -1.0f),  DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) },
-		{ DirectX::XMFLOAT3(1.0f, 1.0f, -1.0f),   DirectX::XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) },
-		{ DirectX::XMFLOAT3(1.0f, -1.0f, -1.0f),  DirectX::XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) },
-		{ DirectX::XMFLOAT3(-1.0f, -1.0f, 1.0f),  DirectX::XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) },
-		{ DirectX::XMFLOAT3(-1.0f, 1.0f, 1.0f),   DirectX::XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) },
-		{ DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f),    DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) },
-		{ DirectX::XMFLOAT3(1.0f, -1.0f, 1.0f),   DirectX::XMFLOAT4(0.0f, 1.0f, 1.0f, 1.0f) }
-	};
-
-	D3D11_BUFFER_DESC vbd;
-	ZeroMemory(&vbd, sizeof(vbd));
-	vbd.Usage = D3D11_USAGE_IMMUTABLE;
-	vbd.ByteWidth = sizeof(vertices);
-	vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	vbd.CPUAccessFlags = 0;
-
-	D3D11_SUBRESOURCE_DATA initDataV;
-	ZeroMemory(&initDataV, sizeof(initDataV));
-	initDataV.pSysMem = vertices;
-	if (FAILED(device->CreateBuffer(&vbd, &initDataV, vertexBuffer.GetAddressOf()))) {
-		MessageBox(0, L"init vertices buffer failed...", 0, 0);
-		return false;
-	}
-
-	// set vertice buffer
-	// UINT stride = sizeof(VertexPosColor);
-	// UINT offset = 0;
-	// immediateContext->IASetVertexBuffers(0, 1, vertexBuffer.GetAddressOf(), &stride, &offset);
-
-	// init indices buffer
-	DWORD indices[] = {
-		0, 1, 2,
-		2, 3, 0,
-		4, 5, 1,
-		1, 0, 4,
-		1, 5, 6,
-		6, 2, 1,
-		7, 6, 5,
-		5, 4, 7,
-		3, 2, 6,
-		6, 7, 3,
-		4, 0, 3,
-		3, 7, 4
-	};
-
-	D3D11_BUFFER_DESC ibd;
-	ZeroMemory(&ibd, sizeof(ibd));
-	ibd.Usage = D3D11_USAGE_IMMUTABLE;
-	ibd.ByteWidth = sizeof(indices);
-	ibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
-	ibd.CPUAccessFlags = 0;
-
-	D3D11_SUBRESOURCE_DATA initDataI;
-	ZeroMemory(&initDataI, sizeof(initDataI));
-	initDataI.pSysMem = indices;
-	if (FAILED(device->CreateBuffer(&ibd, &initDataI, indexBuffer.GetAddressOf()))) {
-		MessageBox(0, L"init indices buffer failed...", 0, 0);
-		return false;
-	}
-
-	// set indice buffer
-	// immediateContext->IASetIndexBuffer(indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
-	
-
-	// init constant buffer
-	D3D11_BUFFER_DESC cbd;
-	ZeroMemory(&cbd, sizeof(cbd));
-	cbd.Usage = D3D11_USAGE_DYNAMIC;
-	cbd.ByteWidth = sizeof(ConstantBuffer);
-	cbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	cbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-	if (FAILED(device->CreateBuffer(&cbd, nullptr, constantBuffer.GetAddressOf()))) {
-		MessageBox(0, L"init constant buffer failed...", 0, 0);
-		return false;
-	}
-
-	cBuffer.world = DirectX::XMMatrixIdentity();
-	cBuffer.view = DirectX::XMMatrixTranspose(
-		DirectX::XMMatrixLookAtLH(
-			DirectX::XMVectorSet(5.0f, 5.0f, -5.0f, 0.0f),
-			DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f),
-			DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f))
-	);
-	cBuffer.proj = DirectX::XMMatrixTranspose(
-		DirectX::XMMatrixPerspectiveFovLH(
-			DirectX::XM_PIDIV2, 
-			static_cast<float>(windowWidth) /windowHeight, 
-			1.0f, 
-			1000.0f)
-	);
-
-	// set constant buffer
-	// immediateContext->VSSetConstantBuffers(0, 1, constantBuffer.GetAddressOf());
-	*/
-
 	// init constant buffers
 	D3D11_BUFFER_DESC cbd;
 	ZeroMemory(&cbd, sizeof(cbd));
@@ -301,9 +219,9 @@ DirectX::XMVECTOR GameApp::toVector(const DirectX::XMFLOAT3& f) const {
 }
 
 void GameApp::normalizeDrt() {
-	drt.x = DirectX::XMVectorGetX(view.view.r[2]);
-	drt.y = DirectX::XMVectorGetY(view.view.r[2]);
-	drt.z = DirectX::XMVectorGetZ(view.view.r[2]);
+	drt.x = DirectX::XMVectorGetX(relView.r[2]);
+	drt.y = DirectX::XMVectorGetY(relView.r[2]);
+	drt.z = DirectX::XMVectorGetZ(relView.r[2]);
 }
 
 void GameApp::forward() {
@@ -321,17 +239,17 @@ void GameApp::backward() {
 }
 
 void GameApp::turnRight() {
-	view.view = DirectX::XMMatrixRotationY(0.5 * dt) * view.view;
+	relView = DirectX::XMMatrixRotationY(0.5 * dt) * relView;
 	normalizeDrt();
 }
 
 void GameApp::turnLeft() {
-	view.view = DirectX::XMMatrixRotationY(-0.5 * dt) * view.view;
+	relView = DirectX::XMMatrixRotationY(-0.5 * dt) * relView;
 	normalizeDrt();
 }
 
 void GameApp::updateView() {
-	view.view = DirectX::XMMatrixTranspose(
+	relView = DirectX::XMMatrixTranspose(
 		DirectX::XMMatrixLookToLH(
 			toVector(eye),
 			toVector(drt),
